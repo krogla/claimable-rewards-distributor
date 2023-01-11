@@ -1,0 +1,16 @@
+{
+  "name": "claimable-rewards-distributor",
+  "version": "1.0.0",
+  "author": {
+    "name": "KRogLA",
+    "url": "https://github.com/krogla"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/krogla/claimable-rewards-distributor.git"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^2.0.0",
+    "hardhat": "^2.12.5"
+  }
+}
