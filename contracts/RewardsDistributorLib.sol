@@ -24,11 +24,27 @@ library RewardsDistributorLib {
         mapping(address => ClaimState) states;
     }
 
+    /// @dev returns summary unclaimed reward amount
+    /// @param _self var instanse
+    /// @return amount
+    function getUnclimed(ClaimDistribution storage _self) internal view returns (uint256) {
+        return _self.totalUnclaimedRewards;
+    }
+
+    /// @dev returns total claimed reward amount for specified account
+    /// @param _self var instanse
+    /// @param _account - account address (e.g. operator's address)
+    /// @return amount
+    function getClaimed(ClaimDistribution storage _self, address _account) internal view returns (uint256) {
+        return _self.states[_account].claimedReward;
+    }
+
     /// @dev returns owing reward amount for specified account and it's share
     /// @param _self var instanse
     /// @param _account - account address (e.g. operator's address)
     /// @param _share - current account share (e.g. current operator's active keys)
-    function owing(ClaimDistribution storage _self, address _account, uint256 _share) internal view returns (uint256) {
+    /// @return amount
+    function getOwing(ClaimDistribution storage _self, address _account, uint256 _share) internal view returns (uint256) {
         ClaimState storage state = _self.states[_account];
         return Math.mulDiv(_self.totalRewardPoints - state.lastRewardPoints, _share, POINT_MULTIPLIER) + state.owedReward;
         // return (((_self.totalRewardPoints - state.lastRewardPoints) * _share) / POINT_MULTIPLIER) + state.owedReward;
@@ -40,7 +56,7 @@ library RewardsDistributorLib {
     /// @param _share - current account share before update (e.g. current operator's active keys)
     function reserve(ClaimDistribution storage _self, address _account, uint256 _share) internal {
         ClaimState storage state = _self.states[_account];
-        state.owedReward = owing(_self, _account, _share);
+        state.owedReward = getOwing(_self, _account, _share);
         state.lastRewardPoints = _self.totalRewardPoints;
     }
 
@@ -49,8 +65,8 @@ library RewardsDistributorLib {
     /// @param _reward - reward amount
     /// @param _totalShares - current sum of account's shares, i.e. current total shares (e.g. )
     function disburse(ClaimDistribution storage _self, uint256 _reward, uint256 _totalShares) internal {
-        require(_reward > 0);
-        uint rewardPoints = Math.mulDiv(_reward, POINT_MULTIPLIER, _totalShares);
+        require(_totalShares > 0, "zero total shares");
+        uint256 rewardPoints = Math.mulDiv(_reward, POINT_MULTIPLIER, _totalShares);
         _self.totalRewardPoints += rewardPoints;
         _self.totalUnclaimedRewards += _reward;
     }
@@ -60,7 +76,7 @@ library RewardsDistributorLib {
     /// @param _account - account address (e.g. operator's address)
     /// @param _share - current account share (e.g. current operator's active keys)
     function claim(ClaimDistribution storage _self, address _account, uint256 _share) internal returns (uint256 _claimed) {
-        _claimed = owing(_self, _account, _share);
+        _claimed = getOwing(_self, _account, _share);
         if (_claimed > 0) {
             ClaimState storage state = _self.states[_account];
             state.lastRewardPoints = _self.totalRewardPoints;

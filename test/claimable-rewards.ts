@@ -12,7 +12,7 @@ describe("RewardsDistributorLib", function () {
     let opRewards: Contract
 
     before(async function () {
-        ops = (await ethers.getSigners()).slice(1, 5).map((s) => s.address)
+        ops = (await ethers.getSigners()).slice(1, 6).map((s) => s.address)
     })
 
     beforeEach(async () => {
@@ -21,7 +21,7 @@ describe("RewardsDistributorLib", function () {
     })
 
     describe("OperatorRewardsMock", function () {
-        it("happy path", async function () {
+        it("happy path (3 operators)", async function () {
             await opRewards.updateKeysMock(ops[0], 100)
             await opRewards.updateKeysMock(ops[2], 25)
 
@@ -102,6 +102,48 @@ describe("RewardsDistributorLib", function () {
             expect(await opRewards.getRewardsOwing(ops[2])).to.be.equal(0)
         })
 
+        it("Should revert disburse if no recipients", async function () {
+            await expect(opRewards.disburseRewardsMock(reward)).to.be.revertedWith("zero total shares")
+        })
+
+        it("Should split reward according keys count", async function () {
+            await opRewards.updateKeysMock(ops[0], 100) // add and remove
+            await opRewards.updateKeysMock(ops[1], 25)
+            await opRewards.updateKeysMock(ops[0], -100)
+
+            await opRewards.disburseRewardsMock(reward)
+            expect(await opRewards.getRewardsOwing(ops[0])).to.be.equal(0)
+            expect(await opRewards.getRewardsOwing(ops[1])).to.be.equal(reward)
+        })
+
+        it("Should update internal counters on disburse and claim", async function () {
+            await opRewards.updateKeysMock(ops[0], 75) // keys share = 3/4
+            await opRewards.updateKeysMock(ops[1], 25) // keys share = 1/4
+
+            expect(await opRewards.getRewardsTotalUnclaimed()).to.be.equal(0)
+            expect(await opRewards.getRewardsOperatorClaimed(ops[0])).to.be.equal(0)
+            expect(await opRewards.getRewardsOperatorClaimed(ops[1])).to.be.equal(0)
+            expect(await opRewards.getRewardsOwing(ops[0])).to.be.equal(0)
+            expect(await opRewards.getRewardsOwing(ops[1])).to.be.equal(0)
+
+            await opRewards.disburseRewardsMock(reward)
+
+            expect(await opRewards.getRewardsTotalUnclaimed()).to.be.equal(reward)
+            expect(await opRewards.getRewardsOperatorClaimed(ops[0])).to.be.equal(0)
+            expect(await opRewards.getRewardsOperatorClaimed(ops[1])).to.be.equal(0)
+            expect(await opRewards.getRewardsOwing(ops[0])).to.be.equal(reward.mul(3).div(4))
+            expect(await opRewards.getRewardsOwing(ops[1])).to.be.equal(reward.div(4))
+
+            await opRewards.claimRewardFor(ops[0])
+            await opRewards.claimRewardFor(ops[1])
+
+            expect(await opRewards.getRewardsTotalUnclaimed()).to.be.equal(0)
+            expect(await opRewards.getRewardsOperatorClaimed(ops[0])).to.be.equal(reward.mul(3).div(4))
+            expect(await opRewards.getRewardsOperatorClaimed(ops[1])).to.be.equal(reward.div(4))
+            expect(await opRewards.getRewardsOwing(ops[0])).to.be.equal(0)
+            expect(await opRewards.getRewardsOwing(ops[1])).to.be.equal(0)
+        })
+
         it("Should revert if nothing to claim", async function () {
             await opRewards.updateKeysMock(ops[0], 100)
             await opRewards.disburseRewardsMock(reward)
@@ -110,22 +152,30 @@ describe("RewardsDistributorLib", function () {
         })
 
         it("adding keys after disburse should not affect owed reward", async function () {
-            await opRewards.updateKeysMock(ops[0], 100)
-            await opRewards.updateKeysMock(ops[2], 25)
+            await opRewards.updateKeysMock(ops[0], 100) // keys share = 4/5
+            await opRewards.updateKeysMock(ops[2], 25) // keys share = 1/5
             await opRewards.disburseRewardsMock(reward)
-            await opRewards.updateKeysMock(ops[1], 50)
-            expect(await opRewards.getRewardsOwing(ops[0])).to.be.equal(utils.parseEther("80"))
-            expect(await opRewards.getRewardsOwing(ops[2])).to.be.equal(utils.parseEther("20"))
+            await opRewards.updateKeysMock(ops[1], 75) // up share to 50%
+            expect(await opRewards.getRewardsOwing(ops[0])).to.be.equal(reward.mul(4).div(5))
+            expect(await opRewards.getRewardsOwing(ops[2])).to.be.equal(reward.div(5))
+        })
+
+        it("precision on big shares diff", async function () {
+            await opRewards.updateKeysMock(ops[0], 11)
+            await opRewards.updateKeysMock(ops[1], 999_999_989) // 1_000_000_000 - 11
+            await opRewards.disburseRewardsMock(reward)
+            expect(await opRewards.getRewardsOwing(ops[0])).to.be.equal(reward.mul(11).div(1_000_000_000))
+            expect(await opRewards.getRewardsOwing(ops[1])).to.be.equal(reward.mul(999_999_989).div(1_000_000_000))
         })
 
         it("total unclaimed should be equal to sum of owing rewards", async function () {
             let keys = 10
-            // let totalKeys = 0
+            // add keys for each op
             for (const op of ops) {
                 await opRewards.updateKeysMock(op, keys)
-                // totalKeys + keys
-                keys *= 2
+                keys *= 3
             }
+
             await opRewards.disburseRewardsMock(reward)
 
             expect(await opRewards.getRewardsTotalUnclaimed()).to.be.equal(reward)
@@ -134,6 +184,7 @@ describe("RewardsDistributorLib", function () {
                 totalOwing = totalOwing.add(await opRewards.getRewardsOwing(op))
             }
 
+            // fix rounding error
             expect(fixRound(totalOwing)).to.be.equal(reward)
         })
     })

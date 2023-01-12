@@ -29,17 +29,17 @@ contract OperatorRewardsMock {
 
     /// @dev get total unclaimed rewards amount
     function getRewardsTotalUnclaimed() external view returns (uint256) {
-        return _getStorageClaimDistribution().totalUnclaimedRewards;
+        return _getStorageClaimDistribution().getUnclimed();
     }
 
     /// @dev get operator's already claimed rewards amount
     function getRewardsOperatorClaimed(address operator) external view returns (uint256) {
-        return _getStorageClaimDistribution().states[operator].claimedReward;
+        return _getStorageClaimDistribution().getClaimed(operator);
     }
 
     /// @dev get operator's owed rewards amount
     function getRewardsOwing(address operator) external view returns (uint256) {
-        return _getStorageClaimDistribution().owing(operator, activeKeys[operator]);
+        return _getStorageClaimDistribution().getOwing(operator, activeKeys[operator]);
     }
 
     /// @dev mock function to manipulate operator's keys amount
