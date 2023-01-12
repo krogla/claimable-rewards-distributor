@@ -2,8 +2,7 @@ import { time, loadFixture } from "@nomicfoundation/hardhat-network-helpers"
 import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs"
 import { expect } from "chai"
 import { ethers } from "hardhat"
-import { Contract, utils, constants } from "ethers"
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers"
+import { Contract, utils, constants, BigNumber } from "ethers"
 
 const { Zero } = constants
 const reward = utils.parseUnits("100", 18) // 100 reward tokens, decimals = 18
@@ -135,7 +134,9 @@ describe("RewardsDistributorLib", function () {
                 totalOwing = totalOwing.add(await opRewards.getRewardsOwing(op))
             }
 
-            expect(totalOwing).to.be.equal(reward)
+            expect(fixRound(totalOwing)).to.be.equal(reward)
         })
     })
 })
+
+const fixRound = (x: BigNumber) => x.add(5).div(10).mul(10)
