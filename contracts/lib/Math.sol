@@ -8,12 +8,6 @@ pragma solidity ^0.8.0;
  * @notice Copied from https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/math/Math.sol
  */
 library Math {
-    enum Rounding {
-        Down, // Toward negative infinity
-        Up, // Toward infinity
-        Zero // Toward zero
-    }
-
     /**
      * @notice Calculates floor(x * y / denominator) with full precision. Throws if result overflows a uint256 or denominator == 0
      * @dev Original credit to Remco Bloemen under MIT license (https://xn--2-umb.com/21/muldiv)

@@ -75,14 +75,16 @@ library RewardsDistributorLib {
     /// @param _self - var instanse
     /// @param _account - account address (e.g. operator's address)
     /// @param _share - current account share (e.g. current operator's active keys)
-    function claim(ClaimDistribution storage _self, address _account, uint256 _share) internal returns (uint256 _claimed) {
-        _claimed = getOwing(_self, _account, _share);
-        if (_claimed > 0) {
+    /// @return amount
+    function claim(ClaimDistribution storage _self, address _account, uint256 _share) internal returns (uint256) {
+        uint256 claimed = getOwing(_self, _account, _share);
+        if (claimed > 0) {
             ClaimState storage state = _self.states[_account];
             state.lastRewardPoints = _self.totalRewardPoints;
             state.owedReward = 0;
-            state.claimedReward += _claimed;
-            _self.totalUnclaimedRewards -= _claimed;
+            state.claimedReward += claimed;
+            _self.totalUnclaimedRewards -= claimed;
         }
+        return claimed;
     }
 }
