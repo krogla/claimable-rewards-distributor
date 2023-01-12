@@ -69,6 +69,7 @@ contract OperatorRewardsMock {
     /// @dev mock function to simulate rewards disburse
     function disburseRewardsMock(uint256 reward) external {
         require(reward > 0, "nothing to disburse");
+        /// @todo require some keys
 
         rewardToken.mint(address(this), reward);
 
