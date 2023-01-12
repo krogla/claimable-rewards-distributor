@@ -47,7 +47,6 @@ library RewardsDistributorLib {
     function getOwing(ClaimDistribution storage _self, address _account, uint256 _share) internal view returns (uint256) {
         ClaimState storage state = _self.states[_account];
         return Math.mulDiv(_self.totalRewardPoints - state.lastRewardPoints, _share, POINT_MULTIPLIER) + state.owedReward;
-        // return (((_self.totalRewardPoints - state.lastRewardPoints) * _share) / POINT_MULTIPLIER) + state.owedReward;
     }
 
     /// @dev hook, should be called before any updates of the account's share
